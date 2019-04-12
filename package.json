@@ -21,6 +21,7 @@
     "@turf/helpers": "^4.7.3",
     "@turf/line-distance": "^4.7.3",
     "@turf/nearest": "^4.7.3",
+    "axios": "^0.18.0",
     "install": "^0.12.2",
     "mapbox": "^1.0.0-beta10",
     "moment": "^2.24.0",

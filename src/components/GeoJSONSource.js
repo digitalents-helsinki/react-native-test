@@ -22,20 +22,17 @@ import DateTimePicker from "react-native-modal-datetime-picker";
 import Page from "./common/Page";
 import BaseExamplePropTypes from "./common/BaseExamplePropTypes";
 import RNPickerSelect from "react-native-picker-select";
+import axios from 'axios'
 /**/
 const url = config.get("url");
 const sports = [
   {
-    label: "Football",
-    value: "football"
+    label: "Avoin",
+    value: "open"
   },
   {
-    label: "Baseball",
-    value: "baseball"
-  },
-  {
-    label: "Hockey",
-    value: "hockey"
+    label: "Oman porukan talkoot",
+    value: "private"
   }
 ];
 const layerStyles = MapboxGL.StyleSheet.create({
@@ -43,8 +40,8 @@ const layerStyles = MapboxGL.StyleSheet.create({
     backgroundPattern: gridPattern
   },
   smileyFace: {
-    fillColor: "rgba(0,0,0 ,0)",
-    fillOutlineColor: "white"
+    fillColor: "rgba(0,0,0 ,0.0)",
+    lineColor: "green"
   }
 });
 const layerStyles2 = MapboxGL.StyleSheet.create({
@@ -53,7 +50,7 @@ const layerStyles2 = MapboxGL.StyleSheet.create({
   },
   smileyFace: {
     fillColor: "rgba(0,0,0 ,0)",
-    fillOutlineColor: "red"
+    lineColor: "red"
   },
   route: {
     lineColor: "white",
@@ -71,13 +68,39 @@ class GeoJSONSource extends React.Component {
     this.setState({ visible: true, feature: feature });
   }
   componentDidMount() {
-    return fetch("http://" + url + ":8089/api/map/shores")
+    fetch("http://192.168.50.68:8089/api/map/shores/reserved")
       .then(response => response.json())
       .then(responseJson => {
         console.log(responseJson);
+        const enhancedData = responseJson.data.map(d => ({
+  ...d,
+  properties: { ...d.properties, key: d._key }
+}))
         var data = {
           type: "FeatureCollection",
-          features: responseJson.data
+          features: enhancedData
+        };
+        this.setState(
+          {
+            json2: data
+          },
+          function() {}
+        );
+      })
+      .catch(error => {
+        console.error(error);
+      });
+    return fetch("http://192.168.50.68:8089/api/map/shores")
+      .then(response => response.json())
+      .then(responseJson => {
+        console.log(responseJson);
+        const enhancedData = responseJson.data.map(d => ({
+  ...d,
+  properties: { ...d.properties, key: d._key }
+}))
+        var data = {
+          type: "FeatureCollection",
+          features: enhancedData
         };
         this.setState(
           {
@@ -90,14 +113,47 @@ class GeoJSONSource extends React.Component {
         console.error(error);
       });
   }
+  handleSubmit(e){
+    var data = [];
+    var reservation = {};
+    reservation.startdate = this.state.date
+    reservation.starttime = this.state.selectedHours + ':' + this.state.selectedMinutes
+    reservation.enddate = this.state.date2
+    reservation.endtime = this.state.selectedHours2 + ':' + this.state.selectedMinutes2
+    reservation.type = this.state.type
+    reservation.organizer = this.state.organizer
+    reservation.name = this.state.name
+    reservation.selected = this.state.feature.properties
+    reservation.phonenumbery = this.state.phonenumbery
+    reservation.email = this.state.email
+    axios({
+        method: 'POST',
+        url: 'http://192.168.50.68:8089/api/map/reserve',
+
+        data: reservation
+      }).then(response => {
+
+
+          }).catch(error => {
+            console.error(error);
+          });
+      
+    this.setState({ visible: false })
+    console.log(e)
+  }
 
   constructor(props) {
     super(props);
     this.inputRefs = {
-      firstTextInput: null,
-      favSport0: null,
-      favSport1: null,
-      lastTextInput: null
+      startdate: null,
+      starttime: null,
+      enddate: null,
+      endtime: null,
+      type: null,
+      organizer: null,
+      name:null,
+      phonenumbery:null,
+      email:null
     };
     this.state = {
       visible: false,
@@ -119,12 +175,7 @@ class GeoJSONSource extends React.Component {
           color: "green"
         }
       ],
-      favSport0: undefined,
-      favSport1: undefined,
-      favSport2: undefined,
-      favSport3: undefined,
-      favSport4: "baseball",
-      favNumber: undefined
+
       //initial Minutes
     };
   }
@@ -133,29 +184,23 @@ class GeoJSONSource extends React.Component {
   }
 
   render() {
+    console.log(MapboxGL.StyleURL)
     const { selectedHours, selectedMinutes } = this.state;
     return (
       <Page {...this.props}>
         <MapboxGL.MapView
-          zoomLevel={2}
-          centerCoordinate={[-35.15165038, 40.6235728]}
+          zoomLevel={11}
+          centerCoordinate={[24.9476669, 60.1535843]}
           onSetCameraComplete={this.onUpdateZoomLevel}
           ref={ref => (this.map = ref)}
           style={sheet.matchParent}
-          styleURL={MapboxGL.StyleURL.Dark}
         >
-          <MapboxGL.VectorSource>
-            <MapboxGL.BackgroundLayer
-              id="background"
-              style={layerStyles.background}
-            />
-          </MapboxGL.VectorSource>
           <MapboxGL.ShapeSource
             onPress={this.onSourceLayerPress.bind(this)}
             id="smileyFaceSource"
             shape={this.state.json}
           >
-            <MapboxGL.FillLayer
+            <MapboxGL.LineLayer
               id="smileyFaceFill"
               style={layerStyles.smileyFace}
             />
@@ -163,9 +208,9 @@ class GeoJSONSource extends React.Component {
           <MapboxGL.ShapeSource
             onPress={this.onSourceLayerPress.bind(this)}
             id="smileyFaceSource2"
-            shape={reservedJSON}
+            shape={this.state.json2}
           >
-            <MapboxGL.FillLayer
+            <MapboxGL.LineLayer
               id="smileyFaceFill2"
               style={layerStyles2.smileyFace}
             />
@@ -188,8 +233,8 @@ class GeoJSONSource extends React.Component {
                 mode="date"
                 placeholder="select date"
                 format="YYYY-MM-DD"
-                minDate="2016-05-01"
-                maxDate="2016-06-01"
+                minDate="2019-01-01"
+                maxDate="2019-06-01"
                 confirmBtnText="Confirm"
                 cancelBtnText="Cancel"
                 customStyles={{
@@ -229,8 +274,8 @@ class GeoJSONSource extends React.Component {
                 mode="date"
                 placeholder="select date"
                 format="YYYY-MM-DD"
-                minDate="2016-05-01"
-                maxDate="2016-06-01"
+                minDate="2019-01-01"
+                maxDate="2019-06-01"
                 confirmBtnText="Confirm"
                 cancelBtnText="Cancel"
                 customStyles={{
@@ -246,7 +291,7 @@ class GeoJSONSource extends React.Component {
                   // ... You can check the source to find the other keys.
                 }}
                 onDateChange={date => {
-                  this.setState({ date: date });
+                  this.setState({ date2: date });
                 }}
               />
               <Text>Loppumisaika</Text>
@@ -258,8 +303,8 @@ class GeoJSONSource extends React.Component {
                 //initial Minutes value
                 onChange={(hours, minutes) =>
                   this.setState({
-                    selectedHours: hours,
-                    selectedMinutes: minutes
+                    selectedHours2: hours,
+                    selectedMinutes2: minutes
                   })
                 }
               />
@@ -268,7 +313,7 @@ class GeoJSONSource extends React.Component {
                 items={sports}
                 onValueChange={value => {
                   this.setState({
-                    favSport0: value
+                    type: value
                   });
                 }}
                 value={this.state.favSport0}
@@ -278,6 +323,8 @@ class GeoJSONSource extends React.Component {
               />
               <Text>Järjestävä taho</Text>
               <TextInput
+              onChangeText={(organizer) => this.setState({organizer})}
+
                 style={{
                   borderBottomColor: "red",
                   borderBottomWidth: 2,
@@ -287,6 +334,8 @@ class GeoJSONSource extends React.Component {
               <Text>Yhteyshenkilö: Nimi</Text>
 
               <TextInput
+              onChangeText={(name) => this.setState({name})}
+
                 style={{
                   borderBottomColor: "red",
                   borderBottomWidth: 2,
@@ -295,6 +344,8 @@ class GeoJSONSource extends React.Component {
               />
               <Text>puhelin</Text>
               <TextInput
+              onChangeText={(phonenumbery) => this.setState({phonenumbery})}
+
                 style={{
                   borderBottomColor: "red",
                   borderBottomWidth: 2,
@@ -303,6 +354,8 @@ class GeoJSONSource extends React.Component {
               />
               <Text>sähköposti</Text>
               <TextInput
+              onChangeText={(email) => this.setState({email})}
+
                 style={{
                   borderBottomColor: "red",
                   borderBottomWidth: 2,
@@ -324,7 +377,7 @@ class GeoJSONSource extends React.Component {
                   style={{
                     marginBottom: 30
                   }}
-                  onPress={() => console.log(null)}
+                  onPress={() => this.handleSubmit()}
                   title="OK"
                   color="#841584"
                   accessibilityLabel="Learn more about this purple button"
