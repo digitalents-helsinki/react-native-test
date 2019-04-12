@@ -134,14 +134,14 @@ class App extends React.Component {
     return (
       <Modal {...modalProps}>
         <SafeAreaView
-          style={[sheet.matchParent, {backgroundColor: colors.primary.pink}]}
+          style={[sheet.matchParent, {backgroundColor: 'colors.primary.blueLight'}]}
           forceInset={{top: 'always'}}
         >
           <View style={styles.exampleBackground}>
             {modalProps.visible ? (
               <item.Component
                 key={item.label}
-                label={item.label}
+                label="SataKolkyt"
                 onDismissExample={this.onCloseExample}
               />
             ) : null}
