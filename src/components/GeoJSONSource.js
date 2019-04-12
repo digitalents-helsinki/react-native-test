@@ -7,11 +7,16 @@ import DatePicker from 'react-native-datepicker'
 import sheet from '../styles/sheet';
 import gridPattern from '../assets/grid_pattern.png';
 import smileyFaceGeoJSON from '../assets/smiley_face.json';
+import reservedJSON from '../assets/reserved.json';
+import config from '../utils/config';
+
 import TimePicker from 'react-native-simple-time-picker';
 import DateTimePicker from 'react-native-modal-datetime-picker';
 import Page from './common/Page';
 import BaseExamplePropTypes from './common/BaseExamplePropTypes';
 import RNPickerSelect from 'react-native-picker-select';
+/**/
+const url = config.get('url')
 const sports = [
   {
     label: 'Football',
@@ -31,10 +36,23 @@ const layerStyles = MapboxGL.StyleSheet.create({
     backgroundPattern: gridPattern,
   },
   smileyFace: {
-    fillAntialias: true,
-    fillColor: 'white',
-    fillOutlineColor: 'rgba(255, 255, 255, 0.84)',
+    fillColor: 'rgba(0,0,0 ,0)',
+    fillOutlineColor: 'white',
   },
+});
+const layerStyles2 = MapboxGL.StyleSheet.create({
+  background: {
+    backgroundPattern: gridPattern,
+  },
+  smileyFace: {
+    fillColor: 'rgba(0,0,0 ,0)',
+    fillOutlineColor: 'red',
+  },
+  route: {
+   lineColor: 'white',
+   lineWidth: 3,
+   lineOpacity: 0.84,
+},
 });
 
 class GeoJSONSource extends React.Component {
@@ -45,6 +63,27 @@ class GeoJSONSource extends React.Component {
    const feature = e.nativeEvent.payload;
    this.setState({ visible: true,feature:feature })
 }
+componentDidMount(){
+  return fetch('http://'+ url +':8089/api/map/shores')
+    .then((response) => response.json())
+    .then((responseJson) => {
+      console.log(responseJson)
+      var data = {
+      type: 'FeatureCollection',
+      features: responseJson.data
+    }
+      this.setState({
+        json: data,
+      }, function(){
+
+      });
+
+    })
+    .catch((error) =>{
+      console.error(error);
+    });
+}
+
 constructor(props) {
   super(props);
   this.inputRefs = {
@@ -55,6 +94,7 @@ constructor(props) {
     };
   this.state = {
     visible: false,
+    json:{},
     feature: [],
     date:"2019-01-01",
     selectedHours: 0,
@@ -81,6 +121,9 @@ constructor(props) {
   //initial Minutes
   };
 }
+getJson(){
+  return this.state.json
+}
 
   render() {
         const { selectedHours, selectedMinutes } = this.state;
@@ -100,13 +143,19 @@ constructor(props) {
             style={layerStyles.background}
           />
 </MapboxGL.VectorSource>
+<MapboxGL.ShapeSource  onPress={this.onSourceLayerPress.bind(this)} id="smileyFaceSource" shape={this.state.json}>
+  <MapboxGL.FillLayer
+    id="smileyFaceFill"
+    style={layerStyles.smileyFace}
+  />
+</MapboxGL.ShapeSource>
+<MapboxGL.ShapeSource  onPress={this.onSourceLayerPress.bind(this)} id="smileyFaceSource2" shape={reservedJSON}>
+  <MapboxGL.FillLayer
+    id="smileyFaceFill2"
+    style={layerStyles2.smileyFace}
+  />
+</MapboxGL.ShapeSource>
 
-          <MapboxGL.ShapeSource  onPress={this.onSourceLayerPress.bind(this)} id="smileyFaceSource" shape={smileyFaceGeoJSON}>
-            <MapboxGL.FillLayer
-              id="smileyFaceFill"
-              style={layerStyles.smileyFace}
-            />
-          </MapboxGL.ShapeSource>
         </MapboxGL.MapView>
         <Overlay
   isVisible={this.state.visible}
